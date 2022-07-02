@@ -21,7 +21,7 @@ namespace LaTiendita.Controllers
         [HttpGet]
         public IActionResult Index()
         {
-            return View("Index2");
+            return View();
 
         }
 
