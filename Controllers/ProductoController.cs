@@ -74,14 +74,17 @@ namespace LaTiendita.Controllers
                 return NotFound();
             }
 
-            var producto = await _context.Producto.FindAsync(id);
-            if (producto == null)
+            var Producto = await _context.Producto
+                .Include(x => x.Talles)
+                    .ThenInclude(x => x.Talle)
+                .SingleOrDefaultAsync(x => x.Id == id);
+            if (Producto == null)
             {
                 return NotFound();
             }
-            ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre", producto.CategoriaId);
-            ViewData["Talles"] = new SelectList(_context.Talles, "Id", "Nombre", producto.CategoriaId);
-            return View(producto);
+            ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre", Producto.CategoriaId);
+            ViewData["Talles"] = new SelectList(_context.Talles, "Id", "Nombre", Producto.CategoriaId);
+            return View(Producto);
         }
 
         [HttpPost]
@@ -176,12 +179,16 @@ namespace LaTiendita.Controllers
             var productoTalle = await _context.ProductoTalle
                 .FirstOrDefaultAsync(x => x.ProductoId == productoId && x.TalleId == talleId);
 
-            if (productoTalle is null)
-                _context.ProductoTalle.Add(new ProductoTalle() { ProductoId = productoId, TalleId = talleId, Cantidad = cantidad });
-            else
+            if (cantidad > 0)
             {
-                productoTalle.Cantidad += cantidad;
-                _context.ProductoTalle.Update(productoTalle);
+                if (productoTalle is null)
+
+                    _context.ProductoTalle.Add(new ProductoTalle() { ProductoId = productoId, TalleId = talleId, Cantidad = cantidad });
+                else
+                {
+                    productoTalle.Cantidad += cantidad;
+                    _context.ProductoTalle.Update(productoTalle);
+                }
             }
 
             await _context.SaveChangesAsync();
