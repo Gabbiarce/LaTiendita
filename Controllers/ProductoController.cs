@@ -1,14 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Authorization;
-
+using Microsoft.EntityFrameworkCore;
 using LaTiendita.Models;
 using LaTiendita.Stock;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LaTiendita.Controllers
 {
-    
     public class ProductoController : Controller
     {
         private readonly BaseDeDatos _context;
@@ -25,6 +27,7 @@ namespace LaTiendita.Controllers
             return View(await baseDeDatos.ToListAsync());
         }
 
+        // GET: Producto/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null || _context.Producto == null)
@@ -32,17 +35,18 @@ namespace LaTiendita.Controllers
                 return NotFound();
             }
 
-            var Producto = await _context.Producto
+            var producto = await _context.Producto
                 .Include(p => p.Categoria)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (Producto == null)
+            if (producto == null)
             {
                 return NotFound();
             }
 
-            return View(Producto);
+            return View(producto);
         }
 
+        
         public IActionResult Create()
         {
             ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre");
@@ -51,16 +55,16 @@ namespace LaTiendita.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ProductoId,Nombre,Precio,Detalle,CategoriaId")] Producto Producto)
+        public async Task<IActionResult> Create([Bind("Id,Nombre,Precio,Detalle,Imagen,CategoriaId")] Producto producto)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(Producto);
+                _context.Add(producto);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["CategoriaId"] = new SelectList(_context.Categorias, "CategoriaId", "Nombre", Producto.CategoriaId);
-            return View(Producto);
+            ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre", producto.CategoriaId);
+            return View(producto);
         }
 
         public async Task<IActionResult> Edit(int? id)
@@ -70,26 +74,21 @@ namespace LaTiendita.Controllers
                 return NotFound();
             }
 
-            var Producto = await _context.Producto
-                .Include(x => x.Talles)
-                    .ThenInclude(x => x.Talle)
-                .SingleOrDefaultAsync(x => x.Id == id);
-            
-            if (Producto == null)
+            var producto = await _context.Producto.FindAsync(id);
+            if (producto == null)
             {
                 return NotFound();
             }
-            
-            ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre", Producto.CategoriaId);
-            ViewData["Talles"] = new SelectList(_context.Talles, "Id", "Nombre", Producto.CategoriaId);
-            return View(Producto);
+            ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre", producto.CategoriaId);
+            ViewData["Talles"] = new SelectList(_context.Talles, "Id", "Nombre", producto.CategoriaId);
+            return View(producto);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id, ProductoId, Nombre, Precio, Detalle, CategoriaId")] Producto Producto)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Nombre,Precio,Detalle,Imagen,CategoriaId")] Producto producto)
         {
-            if (id != Producto.Id)
+            if (id != producto.Id)
             {
                 return NotFound();
             }
@@ -98,12 +97,12 @@ namespace LaTiendita.Controllers
             {
                 try
                 {
-                    _context.Update(Producto);
+                    _context.Update(producto);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (! await ProductoExists(Producto.Id))
+                    if (!ProductoExists(producto.Id))
                     {
                         return NotFound();
                     }
@@ -114,12 +113,11 @@ namespace LaTiendita.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["CategoriaId"] = new SelectList(_context.Categorias, "CategoriaId", "Nombre", Producto.CategoriaId);
-            ViewData["TalleId"] = new SelectList(_context.ProductoTalle, "TalleId", "Nombre", Producto.Talles);
-            return View(Producto);
+            ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre", producto.CategoriaId);
+            ViewData["TalleId"] = new SelectList(_context.ProductoTalle, "TalleId", "Nombre", producto.Talles);
+            return View(producto);
         }
 
-        // GET: Producto/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null || _context.Producto == null)
@@ -127,18 +125,17 @@ namespace LaTiendita.Controllers
                 return NotFound();
             }
 
-            var Producto = await _context.Producto
+            var producto = await _context.Producto
                 .Include(p => p.Categoria)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (Producto == null)
+            if (producto == null)
             {
                 return NotFound();
             }
 
-            return View(Producto);
+            return View(producto);
         }
 
-        // POST: Producto/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -147,41 +144,39 @@ namespace LaTiendita.Controllers
             {
                 return Problem("Entity set 'BaseDeDatos.Producto'  is null.");
             }
-            var Producto = await _context.Producto.FindAsync(id);
-            if (Producto != null)
+            var producto = await _context.Producto.FindAsync(id);
+            if (producto != null)
             {
-                _context.Producto.Remove(Producto);
+                _context.Producto.Remove(producto);
             }
             
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
-        private async Task<bool> ProductoExists(int id)
+        private bool ProductoExists(int id)
         {
-            return await _context.Producto.AnyAsync(e => e.Id == id);
+          return _context.Producto.Any(e => e.Id == id);
         }
 
-        private async Task<bool> TalleExists (int id)
+        private async Task<bool> TalleExists(int id)
         {
             return await _context.Talles.AnyAsync(e => e.Id == id);
         }
 
-
-
         [HttpPost, ActionName("AddTalle")]
         public async Task<IActionResult> AddTalle(int productoId, int talleId, int cantidad)
         {
-            if (! await ProductoExists(productoId))
-                return NotFound();
+            //if (! await ProductoExists(productoId))
+            //    return NotFound();
 
-            if (! await TalleExists(talleId))
-                return NotFound();
+            //if (! await TalleExists(talleId))
+            //    return NotFound();
 
             var productoTalle = await _context.ProductoTalle
                 .FirstOrDefaultAsync(x => x.ProductoId == productoId && x.TalleId == talleId);
 
-            if(productoTalle is null)
+            if (productoTalle is null)
                 _context.ProductoTalle.Add(new ProductoTalle() { ProductoId = productoId, TalleId = talleId, Cantidad = cantidad });
             else
             {
@@ -193,6 +188,8 @@ namespace LaTiendita.Controllers
 
             return Ok();
         }
+
+
+
     }
 }
-    

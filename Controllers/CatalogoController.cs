@@ -8,7 +8,7 @@ using LaTiendita.Models;
 
 namespace LaTiendita.Controllers
 {
-    
+
     public class CatalogoController : Controller
     {
         private readonly BaseDeDatos _context;
@@ -150,14 +150,26 @@ namespace LaTiendita.Controllers
             {
                 _context.Producto.Remove(producto);
             }
-            
+
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
+
+        public async Task<IActionResult> NoStock()
+        {
+            var productos = await _context.Producto
+                .Include(x => x.Talles)
+                .Include(p => p.Categoria)
+                .ToListAsync();
+
+            ViewData["Talles"] = new SelectList(_context.Talles, "Id", "Nombre");
+            return View(productos);
+
+        }
         private bool ProductoExists(int id)
         {
-          return _context.Producto.Any(e => e.Id == id);
+            return _context.Producto.Any(e => e.Id == id);
         }
     }
 }
