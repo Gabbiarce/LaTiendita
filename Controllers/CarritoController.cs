@@ -32,7 +32,7 @@ namespace LaTiendita.Controllers
 
 
         [HttpPost, ActionName("AddProduct")]
-        public async Task<IActionResult> AgregarProductoAlCarrito(int productoId, int talleId, int cantidad)
+        public async Task<ActionResult<bool>> AgregarProductoAlCarrito(int productoId, int talleId, int cantidad)
         {
             var cookieUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
@@ -48,63 +48,46 @@ namespace LaTiendita.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            //if (!await ProductoExists(productoId))
-            //    return NotFound();      
-
-            //if (!await TalleExists(talleId))
-            //    return NotFound();
-            //    
-
+            if (!HayStock(productoId, talleId))
+            {
+                TempData["msgError"] = "No hay stock del producto seleccionado.";
+                return false;
+            }
 
             var productosDelCarrito = carritoDb.Productos
                 .Any(x => x.ProductoId == productoId && x.TalleId == talleId);
 
-            var hayStock = await HayStock(productoId, talleId);
+            var hayStock = HayStock(productoId, talleId);
 
             var productoEnStock = _context.ProductoTalle.FirstOrDefault(e => e.ProductoId == productoId && e.TalleId == talleId);
 
             if (!productosDelCarrito)
             {
-
-                if (hayStock)
-                {
-                    carritoDb.Productos.Add(new CarritoProducto() { ProductoId = productoId, TalleId = talleId, Cantidad = cantidad });
-                    productoEnStock.Cantidad -= cantidad;
-                    _context.ProductoTalle.Update(productoEnStock);
-                }
-                else
-                {
-                    return RedirectToAction("NoStock", "Catalogo");
-                }
-
+                carritoDb.Productos.Add(new CarritoProducto() { ProductoId = productoId, TalleId = talleId, Cantidad = cantidad });
+                productoEnStock.Cantidad -= cantidad;
+                _context.ProductoTalle.Update(productoEnStock);
+                TempData["msgOk"] = "Se agrego al chango";
 
             }
             else
             {
+                var productoTalle = carritoDb.Productos.FirstOrDefault(x => x.ProductoId == productoId && x.TalleId == talleId);
+                productoTalle.Cantidad += cantidad;
+                productoEnStock.Cantidad -= cantidad;
+                _context.Carritos.Update(carritoDb);
+                _context.ProductoTalle.Update(productoEnStock);
+                TempData["msgOk"] = "Se agrego al chango";
 
-                if (hayStock)
-                {
-                    var productoTalle = carritoDb.Productos.FirstOrDefault(x => x.ProductoId == productoId && x.TalleId == talleId);
-                    productoTalle.Cantidad += cantidad;
-                    productoEnStock.Cantidad -= cantidad;
-                    _context.Carritos.Update(carritoDb);
-                    _context.ProductoTalle.Update(productoEnStock);
-                }
-                else
-                {
-                    return RedirectToAction("NoStock", "Catalogo");
-                }
 
 
             }
-
             await _context.SaveChangesAsync();
 
             return Ok();
         }
 
 
-        private async Task<bool> HayStock(int productoId, int talleId)
+        private bool HayStock(int productoId, int talleId)
         {
             var hayStock = false;
             ProductoTalle productoAchequear = _context.ProductoTalle.FirstOrDefault(e => e.ProductoId == productoId && e.TalleId == talleId);
@@ -117,15 +100,7 @@ namespace LaTiendita.Controllers
             return hayStock;
         }
 
-        private async Task<bool> ProductoExists(int id)
-        {
-            return await _context.Producto.AnyAsync(e => e.Id == id);
-        }
 
-        private async Task<bool> TalleExists(int id)
-        {
-            return await _context.Talles.AnyAsync(e => e.Id == id);
-        }
 
         private double calcularTotal()
         {

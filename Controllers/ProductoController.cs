@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace LaTiendita.Controllers
 {
+
     public class ProductoController : Controller
     {
         private readonly BaseDeDatos _context;
@@ -27,7 +28,6 @@ namespace LaTiendita.Controllers
             return View(await baseDeDatos.ToListAsync());
         }
 
-        // GET: Producto/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null || _context.Producto == null)
@@ -35,18 +35,17 @@ namespace LaTiendita.Controllers
                 return NotFound();
             }
 
-            var producto = await _context.Producto
+            var Producto = await _context.Producto
                 .Include(p => p.Categoria)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (producto == null)
+            if (Producto == null)
             {
                 return NotFound();
             }
 
-            return View(producto);
+            return View(Producto);
         }
 
-        
         public IActionResult Create()
         {
             ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre");
@@ -55,16 +54,25 @@ namespace LaTiendita.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Nombre,Precio,Detalle,Imagen,CategoriaId")] Producto producto)
+        public async Task<IActionResult> Create([Bind("Id,Nombre,Precio,Detalle,Imagen,CategoriaId")] Producto Producto)
         {
-            if (ModelState.IsValid)
+            if (!string.IsNullOrEmpty(Producto.Nombre))
             {
-                _context.Add(producto);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                if (ModelState.IsValid)
+                {
+                    _context.Add(Producto);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
+                ViewData["CategoriaId"] = new SelectList(_context.Categorias, "CategoriaId", "Nombre", Producto.CategoriaId);
             }
-            ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre", producto.CategoriaId);
-            return View(producto);
+            else
+            {
+                TempData["null"] = "No se puede ingresar valores vacios";
+                return RedirectToAction();
+            }
+           
+            return View(Producto);
         }
 
         public async Task<IActionResult> Edit(int? id)
@@ -78,10 +86,12 @@ namespace LaTiendita.Controllers
                 .Include(x => x.Talles)
                     .ThenInclude(x => x.Talle)
                 .SingleOrDefaultAsync(x => x.Id == id);
+
             if (Producto == null)
             {
                 return NotFound();
             }
+
             ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre", Producto.CategoriaId);
             ViewData["Talles"] = new SelectList(_context.Talles, "Id", "Nombre", Producto.CategoriaId);
             return View(Producto);
@@ -89,38 +99,49 @@ namespace LaTiendita.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Nombre,Precio,Detalle,Imagen,CategoriaId")] Producto producto)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Nombre,Precio,Detalle,Imagen,CategoriaId")] Producto Producto)
         {
-            if (id != producto.Id)
+            if (!string.IsNullOrEmpty(Producto.Nombre))
             {
-                return NotFound();
+                if (id != Producto.Id)
+                {
+                    return NotFound();
+                }
+
+                if (ModelState.IsValid)
+                {
+                    try
+                    {
+                        _context.Update(Producto);
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        if (!await ProductoExists(Producto.Id))
+                        {
+                            return NotFound();
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+                    return RedirectToAction(nameof(Index));
+                }
+
+                ViewData["CategoriaId"] = new SelectList(_context.Categorias, "CategoriaId", "Nombre", Producto.CategoriaId);
+                ViewData["TalleId"] = new SelectList(_context.ProductoTalle, "TalleId", "Nombre", Producto.Talles);
+            }
+            else
+            {
+                TempData["null"] = "No se puede ingresar valores vacios";
+                return RedirectToAction();
             }
 
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(producto);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!ProductoExists(producto.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["CategoriaId"] = new SelectList(_context.Categorias, "Id", "Nombre", producto.CategoriaId);
-            ViewData["TalleId"] = new SelectList(_context.ProductoTalle, "TalleId", "Nombre", producto.Talles);
-            return View(producto);
+            return View(Producto);
         }
 
+        // GET: Producto/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null || _context.Producto == null)
@@ -128,17 +149,18 @@ namespace LaTiendita.Controllers
                 return NotFound();
             }
 
-            var producto = await _context.Producto
+            var Producto = await _context.Producto
                 .Include(p => p.Categoria)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (producto == null)
+            if (Producto == null)
             {
                 return NotFound();
             }
 
-            return View(producto);
+            return View(Producto);
         }
 
+        // POST: Producto/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -147,19 +169,19 @@ namespace LaTiendita.Controllers
             {
                 return Problem("Entity set 'BaseDeDatos.Producto'  is null.");
             }
-            var producto = await _context.Producto.FindAsync(id);
-            if (producto != null)
+            var Producto = await _context.Producto.FindAsync(id);
+            if (Producto != null)
             {
-                _context.Producto.Remove(producto);
+                _context.Producto.Remove(Producto);
             }
-            
+
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
-        private bool ProductoExists(int id)
+        private async Task<bool> ProductoExists(int id)
         {
-          return _context.Producto.Any(e => e.Id == id);
+            return await _context.Producto.AnyAsync(e => e.Id == id);
         }
 
         private async Task<bool> TalleExists(int id)
@@ -167,27 +189,26 @@ namespace LaTiendita.Controllers
             return await _context.Talles.AnyAsync(e => e.Id == id);
         }
 
+
+
         [HttpPost, ActionName("AddTalle")]
         public async Task<IActionResult> AddTalle(int productoId, int talleId, int cantidad)
         {
-            //if (! await ProductoExists(productoId))
-            //    return NotFound();
 
-            //if (! await TalleExists(talleId))
-            //    return NotFound();
 
             var productoTalle = await _context.ProductoTalle
                 .FirstOrDefaultAsync(x => x.ProductoId == productoId && x.TalleId == talleId);
 
             if (cantidad > 0)
             {
-                if (productoTalle is null)
 
+                if (productoTalle is null)
                     _context.ProductoTalle.Add(new ProductoTalle() { ProductoId = productoId, TalleId = talleId, Cantidad = cantidad });
                 else
                 {
                     productoTalle.Cantidad += cantidad;
                     _context.ProductoTalle.Update(productoTalle);
+
                 }
             }
 
@@ -195,7 +216,6 @@ namespace LaTiendita.Controllers
 
             return Ok();
         }
-
 
 
     }

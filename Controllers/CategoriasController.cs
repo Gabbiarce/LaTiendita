@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace LaTiendita.Controllers
 {
-    
+
     public class CategoriasController : Controller
     {
         private readonly BaseDeDatos _context;
@@ -50,12 +50,29 @@ namespace LaTiendita.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("CategoriaId,Nombre")] Categoria categoria)
         {
-            if (ModelState.IsValid)
+            if (!string.IsNullOrEmpty(categoria.Nombre))
             {
-                _context.Add(categoria);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+
+                if (!CategoriaExists2(categoria.Nombre))
+                {
+                    if (ModelState.IsValid)
+                    {
+                        _context.Add(categoria);
+                        await _context.SaveChangesAsync();
+                        return RedirectToAction(nameof(Index));
+                    }
+                }
+                else
+                {
+                    TempData["existe"] = "La categoria ya existe";
+                }
             }
+            else
+            {
+                TempData["null"] = "No se puede ingresar valores vacios";
+            }
+
+
             return View(categoria);
         }
 
@@ -78,31 +95,48 @@ namespace LaTiendita.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id, CategoriaId, Nombre")] Categoria categoria)
         {
-            if (id != categoria.Id)
+            if (!string.IsNullOrEmpty(categoria.Nombre))
             {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
+                if (!CategoriaExists2(categoria.Nombre))
                 {
-                    _context.Update(categoria);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!CategoriaExists(categoria.Id))
+                    if (id != categoria.Id)
                     {
                         return NotFound();
                     }
-                    else
+
+                    if (ModelState.IsValid)
                     {
-                        throw;
+                        try
+                        {
+                            _context.Update(categoria);
+                            await _context.SaveChangesAsync();
+                        }
+                        catch (DbUpdateConcurrencyException)
+                        {
+                            if (!CategoriaExists(categoria.Id))
+                            {
+                                return NotFound();
+                            }
+                            else
+                            {
+                                throw;
+                            }
+                        }
+                        return RedirectToAction(nameof(Index));
                     }
                 }
-                return RedirectToAction(nameof(Index));
+                else
+                {
+                    TempData["existe"] = "La categoria ya existe";
+                }
             }
+            else
+            {
+                TempData["null"] = "No se puede ingresar valores vacios";
+            }
+            
+
+            
             return View(categoria);
         }
 
@@ -138,6 +172,10 @@ namespace LaTiendita.Controllers
         private bool CategoriaExists(int id)
         {
             return _context.Categorias.Any(e => e.Id == id);
+        }
+        private bool CategoriaExists2(string nombre)
+        {
+            return _context.Categorias.Any(e => e.Nombre.ToUpper().Equals(nombre.ToUpper()));
         }
     }
 }

@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace LaTiendita.Controllers
 {
-    
+
     public class TallesController : Controller
     {
         private readonly BaseDeDatos _context;
@@ -50,7 +50,7 @@ namespace LaTiendita.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("TalleId,Nombre")] Talle talle)
         {
-            if (await ValidarTalle(talle.Nombre))
+            if (!await ExisteTalle(talle.Nombre))
             {
                 if (ModelState.IsValid)
                 {
@@ -58,32 +58,22 @@ namespace LaTiendita.Controllers
                     await _context.SaveChangesAsync();
                     return RedirectToAction(nameof(Index));
                 }
-               
-            }
 
+            }
+            TempData["msgError"] = "El talle ya existe";
             return RedirectToAction("Create", "Talles");
 
         }
 
-        private async Task<bool> ValidarTalle(string nombre)
+
+
+        private async Task<bool> ExisteTalle(string nombre)
         {
-            bool validar = false;
 
             var nombreTalle = await _context.Talles
-               .FirstOrDefaultAsync(m => m.Nombre.ToUpper() == nombre.ToUpper());
+               .AnyAsync(m => m.Nombre.ToUpper() == nombre.ToUpper());
 
-            if (nombreTalle == null)
-            {
-                validar = nombre.ToUpper() == "XS" ||
-                          nombre.ToUpper() == "S" ||
-                          nombre.ToUpper() == "M" ||
-                          nombre.ToUpper() == "L" ||
-                          nombre.ToUpper() == "XL" ||
-                          nombre.ToUpper() == "XXL" ||
-                          nombre.ToUpper() == "XXXL";
-            }
-
-            return validar; 
+            return nombreTalle;
         }
 
         public async Task<IActionResult> Edit(int? id)
@@ -110,7 +100,7 @@ namespace LaTiendita.Controllers
                 return NotFound();
             }
 
-            if (await ValidarTalle(talle.Nombre))
+            if (!await ExisteTalle(talle.Nombre) && !await TieneStock(id))
             {
                 if (ModelState.IsValid)
                 {
@@ -134,7 +124,7 @@ namespace LaTiendita.Controllers
                 }
                 return View(talle);
             }
-
+            TempData["msgEdicion"] = "No se puede editar un talle con stock";
             return RedirectToAction("Edit", "Talles");
         }
 
@@ -144,6 +134,8 @@ namespace LaTiendita.Controllers
             {
                 return NotFound();
             }
+
+
 
             var talle = await _context.Talles
                 .FirstOrDefaultAsync(m => m.Id == id);
@@ -155,36 +147,29 @@ namespace LaTiendita.Controllers
             return View(talle);
         }
 
-        private bool sePuedeBorrar(List<ProductoTalle> productos)
+
+
+        private async Task<bool> TieneStock(int id)
         {
-            bool hayProducto = true;
+            var tieneStock = await _context.ProductoTalle
+               .AnyAsync(x => x.TalleId == id && x.Cantidad > 0);
 
-            int i = 0;
-
-            while (i < productos.Count() && hayProducto)
-            {
-                if (productos[i].Cantidad > 0)
-                {
-                    hayProducto = false;
-                }
-                else
-                {
-                    i++;
-                }
-            }
-
-            return hayProducto;
+            return tieneStock;
         }
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var productosAChequear = await _context.ProductoTalle
-               .Where(x => x.TalleId == id)
-               .ToListAsync();
+            //var productosAChequear = await _context.ProductoTalle
+            //   .Where(x => x.TalleId == id)
+            //   .ToListAsync();
 
-            if (sePuedeBorrar(productosAChequear))
+            //var productosAChequearDos = await _context.ProductoTalle
+            //   .AnyAsync(x => x.TalleId == id  && x.Cantidad > 0);
+
+
+            if (!await TieneStock(id))
             {
                 var talle = await _context.Talles.FindAsync(id);
                 _context.Talles.Remove(talle);
@@ -193,12 +178,18 @@ namespace LaTiendita.Controllers
             }
             else
             {
+                TempData["msgBorrado"] = "No se puede eliminar un talle con  productos en stock";
                 return RedirectToAction(nameof(Index));
 
             }
         }
 
-            private bool TalleExists(int id)
+        public async Task<IActionResult> TalleConStock()
+        {
+            return View(await _context.Talles.ToListAsync());
+        }
+
+        private bool TalleExists(int id)
         {
             return _context.Talles.Any(e => e.Id == id);
         }

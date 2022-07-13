@@ -6,31 +6,53 @@
 }
 
 <h1>Catálogo</h1>
+@if (@TempData["msgError"] != null)
+{
+    <div class="alert alert-danger" role="alert">
+     @TempData["msgError"]
+    </div>
+
+
+}
+@if (@TempData["msgOk"] != null)
+{
+    <div class="alert alert-info" role="alert">
+     @TempData["msgOk"]
+    </div>
+
+
+}
+
+
+
 
 <br>
 <br>
 <div class="d-flex justify-content-between flex-wrap align-content-between">
 
 @foreach (var item in Model) {
-    <div class="card" style="width: 18rem;">
+    <div class="card" style="width: 18rem; margin-top: 40px;">
         <img src="@Html.DisplayFor(modelItem => item.Imagen)" class="card-img-top" alt="...">
         <div class="card-body">
             <input hidden id="productoId" value="@Html.DisplayFor(modelItem => item.Id)">
             <h5 class="card-title">@Html.DisplayFor(modelItem => item.Nombre)</h5>
-            <p class="card-text">@Html.DisplayFor(modelItem => item.Detalle)  
-             <br>
-             Precio: $ @Html.DisplayFor(modelItem => item.Precio)</p>
-            
-             Talle:
-            <select id="select_@item.Id" class="form-select" asp-items="@ViewBag.Talles"></select>
-            <br/>
-            <a href="#" class="btn btn-primary" onclick="AgregarProductoAlCarrito(@item.Id)">Agregar Al Carrito</a>
-        </div>
+            <p class="card-text">
+                @Html.DisplayFor(modelItem => item.Detalle)
+            <br>
+            Precio: $ @Html.DisplayFor(modelItem => item.Precio)
+        </p>
+
+        Talle:
+        <select id="select_@item.Id" class="form-select" asp-items="@ViewBag.Talles"></select>
+        <br />
+        <button type="submit" class="btn btn-primary" onclick="AgregarProductoAlCarrito(@item.Id)">Agregar Al Carrito</button>
+    </div>
     </div>
     
 }
 
 </div>
+
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
@@ -46,10 +68,10 @@
                 talleId: talleId, 
                 cantidad: cantidad 
             }
-
             $.post("/Carrito/AddProduct", request,function (data) {})
-                .done(function () {
+                .done(function (res) {
                     location.reload();
+                    console.log("res",res);
                 })
                 .fail(function () {
                     alert("error");

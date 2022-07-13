@@ -63,7 +63,6 @@ namespace LaTiendita.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id, Email, Nombre")] Usuario usuario)
         {
-
             if (ModelState.IsValid)
             {
                 var existente = _context
